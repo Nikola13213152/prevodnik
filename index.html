@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Převodník crypto měn</title>
+    <link rel="preconnect" href="https://fonts.gstatic.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <h1>Převodník crypto měn</h1>
+    <div id="card">
+      <input type="text" name="fromValue" id="fromValue" />
+      <select
+        name="fromCurrency"
+        id="fromCurrency"
+        onchange="updateOptions(this)"
+      >
+        <option value=""></option>
+        <option value="monero">XMR</option>
+        <option value="bitcoin">BTC</option>
+        <option value="litecoin">LTC</option>
+        <option value="czk">CZK</option>
+        <option value="usd">USD</option>
+        <option value="eur">EUR</option>
+      </select>
+      <input type="text" name="toValue" id="toValue" disabled />
+      <select name="toCurrency" id="toCurrency">
+        <option value=""></option>
+        <option value="czk" class="regular">CZK</option>
+        <option value="usd" class="regular">USD</option>
+        <option value="eur" class="regular">EUR</option>
+        <option value="monero" class="crypto">XMR</option>
+        <option value="bitcoin" class="crypto">BTC</option>
+        <option value="litecoin" class="crypto">LTC</option>
+      </select>
+      <input type="submit" value="Převeď měnu" onclick="update()" />
+    </div>
+
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background-color: #eee;
+        font-family: Roboto, sans-serif;
+      }
+
+      h1 {
+        font-weight: 700;
+        text-align: center;
+        margin: 1em;
+      }
+
+      #card {
+        background-color: white;
+        margin: 0 auto;
+        padding: 3em;
+        max-width: 640px;
+        background-color: white;
+        box-shadow: 0 0 25px rgba(0, 0, 0, 0.05);
+      }
+
+      input[type='text'],
+      select {
+        font-size: 1em;
+        border-radius: 5px;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        margin: 0.5em;
+        padding: 0.75em;
+        width: calc(20% - 0.5em - 0.75em);
+        display: inline-block;
+      }
+
+      input[type='text'] {
+        width: calc(80% - 0.5em - 0.75em);
+      }
+
+      input[type='submit'] {
+        font-size: 1em;
+        border-radius: 5px;
+        border: 1px solid rgba(0, 43, 255, 0.05);
+        color: white;
+        background-color: black;
+        margin: 0.5em;
+        margin-top: 0.75em;
+        padding: 0.75em;
+        width: calc(100% - 0.5em - 0.75em);
+      }
+
+      input[type='submit']:hover {
+        transition: 0.25s;
+        opacity: 0.75;
+      }
+
+      input[type='text'].updated {
+        border: 1px solid rgba(0, 0, 0, 1);
+      }
+
+      input[type='text'].error,
+      select.error {
+        border: 1px solid red;
+      }
+    </style>
+
+    <script>
+      function isCrypto(currency) {
+        let crypto = ['monero', 'bitcoin', 'litecoin']
+        if (crypto.includes(currency)) {
+          return true
+        } else {
+          return false
+        }
+      }
+
+      function updateOptions(selected) {
+        let toInput = document.getElementById('toValue')
+        toInput.className = ''
+        toInput.value = ''
+
+        let toCurrency = document.getElementById('toCurrency')
+        if (isCrypto(toCurrency.value) == isCrypto(selected.value)) {
+          toCurrency.selectedIndex = 0
+        }
+
+        for (let index = 0; index < toCurrency.options.length; index++) {
+          toCurrency.options[index].disabled = false
+        }
+
+        if (selected.value !== '') {
+          if (isCrypto(selected.value)) {
+            let cryptoOptions = document.getElementsByClassName('crypto')
+            for (let index = 0; index < cryptoOptions.length; index++) {
+              cryptoOptions[index].disabled = true
+            }
+          } else {
+            let regularOptions = document.getElementsByClassName('regular')
+            for (let index = 0; index < regularOptions.length; index++) {
+              regularOptions[index].disabled = true
+            }
+          }
+        }
+      }
+
+      async function getPrice(crypto, regular) {
+        let response = await fetch(
+          `https://api.coingecko.com/api/v3/simple/price?ids=${crypto}&vs_currencies=${regular}`
+        )
+        let data = await response.json()
+        return JSON.stringify(data[crypto][regular])
+      }
+
+      async function update() {
+        let fromValue = document.getElementById('fromValue')
+        let fromCurrency = document.getElementById('fromCurrency')
+        let toCurrency = document.getElementById('toCurrency')
+
+        fields = [fromCurrency, toCurrency, fromValue]
+
+        for (let index = 0; index < fields.length; index++) {
+          fields[index].className = ''
+          if (fields[index].value == '') {
+            fields[index].className = 'error'
+            return
+          }
+        }
+
+        if (isCrypto(fromCurrency.value)) {
+          let price = await getPrice(fromCurrency.value, toCurrency.value)
+          document.getElementById('toValue').value = price * fromValue.value
+        } else {
+          let price = await getPrice(toCurrency.value, fromCurrency.value)
+          document.getElementById('toValue').value = fromValue.value / price
+        }
+
+        let toInput = document.getElementById('toValue')
+        toInput.className = 'updated'
+      }
+    </script>
+  </body>
+</html>
